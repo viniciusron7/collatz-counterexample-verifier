@@ -1,27 +1,30 @@
-# Collatz counterexample verifier
+<h1 align="center">Just dropped in? <a href="https://www.youtube.com/watch?v=094y1Z2wpJg">Watch this video</a> to get up to speed.</h1>
+<br>
+
+## Collatz counterexample verifier
 
 `collatz` decides whether a positive integer `n` (up to millions of digits) is a counterexample to
 the Collatz conjecture (x → x/2 if even, x → 3x+1 if odd), i.e. whether its trajectory diverges or
 enters a cycle other than 1 → 4 → 2 → 1. `candidates` lists the `n` that may still be the
 **smallest** counterexample and discards the rest by sieves (see
-[Candidate generator](#candidate-generator)).
+[Candidate generator](##candidate-generator)).
 
-## Build
+### Build
 
 ```sh
-brew install gmp      # big-integer library
-make                  # builds ./collatz and ./candidates
-make test             # tests of both programs (~2 min)
-make bench            # performance table (bench/bench.py)
+brew install gmp      ## big-integer library
+make                  ## builds ./collatz and ./candidates
+make test             ## tests of both programs (~2 min)
+make bench            ## performance table (bench/bench.py)
 ```
 
-## Usage
+### Usage
 
 ```sh
-./collatz "2^100000-1"                 # expressions: + - * / % ^ ( ), 0x… and 0b…
-./collatz -s "2^1000000-1"             # stopping time only (fastest criterion)
-./collatz -f huge_number.txt           # ONE number from a file (line breaks ignored)
-seq -f %.0f 1 1000000 | ./collatz -r   # one number per line (%.0f avoids "1e+06" on macOS)
+./collatz "2^100000-1"                 ## expressions: + - * / % ^ ( ), 0x… and 0b…
+./collatz -s "2^1000000-1"             ## stopping time only (fastest criterion)
+./collatz -f huge_number.txt           ## ONE number from a file (line breaks ignored)
+seq -f %.0f 1 1000000 | ./collatz -r   ## one number per line (%.0f avoids "1e+06" on macOS)
 ```
 
 ```
@@ -59,7 +62,7 @@ the options. Input digits may be grouped by `_`, dots or spaces in groups of 3.
 With several numbers, the highest code wins. In raw fields, `-` means "not reached", `bound=0`
 means n < 2^71, `sigmaT`/`totalT` count steps of T, and `time` is in seconds.
 
-## Interruption
+### Interruption
 
 Ctrl+C, `kill` or closing the terminal stops the program at a safe point within a fraction of a
 second: input reading stops, the unproved number in progress is discarded, output ends at the last
@@ -69,16 +72,16 @@ Ctrl+C exits at once, keeping what is proved; a 3rd exits unconditionally. A clo
 (`| head`) stops `collatz` the same way (code 141). Only `kill -9` or power loss can lose the last
 second of work; the record stays consistent in every case.
 
-## Record of tested numbers
+### Record of tested numbers
 
 Every n in [2^71, 2^127) with verdict `NO` is stored in `Tested/` and is not generated again by
 `candidates`. `NOTMIN`, `UNKNOWN`, `CYCLE` and errors are never recorded. The folder lies next to
 the executable; `COLLATZ_TESTED` overrides it.
 
 ```sh
-./candidates '2^71' '2^71+10^9' | ./collatz -r -s   # verify and record
-./candidates '2^71' '2^71+10^9' | ./collatz -r -s   # again: nothing to do
-./candidates --tested | head                        # tested numbers, ascending (-c: count)
+./candidates '2^71' '2^71+10^9' | ./collatz -r -s   ## verify and record
+./candidates '2^71' '2^71+10^9' | ./collatz -r -s   ## again: nothing to do
+./candidates --tested | head                        ## tested numbers, ascending (-c: count)
 ```
 
 | file | content |
@@ -101,7 +104,7 @@ the executable; `COLLATZ_TESTED` overrides it.
   are ignored with a warning (those numbers are simply regenerated); a corrupted `tested.bin` is
   never rewritten. A legacy `tested.txt` is imported once and renamed to `tested.txt.imported`.
 
-### Trajectory data (`--data`)
+#### Trajectory data (`--data`)
 
 One line per stored number, for the map x → x/2, x → 3x+1:
 
@@ -133,7 +136,7 @@ order of n (`ORDER BY rowid`).
 sqlite3 -header -column Tested/data.sqlite "SELECT n, k, total FROM data ORDER BY total DESC LIMIT 10"
 ```
 
-## Criteria
+### Criteria
 
 1. **Stopping time σ(n)**, the first k ≥ 1 with x_k < x₀. Fastest; alone it proves only that n is
    **not the smallest** counterexample (the minimal element of a non-trivial cycle has no σ, and
@@ -146,7 +149,7 @@ Without `-s`, the run goes to 1 at almost the cost of reaching 2^71. With `-s`, 
 the verdict is `NO` if n < 2^71 or x_σ < 2^71, otherwise `NOTMIN`. Non-trivial cycles are detected
 by Brent's algorithm; divergence cannot be proved by computation and runs until the `-n` limit.
 
-## Implementation
+### Implementation
 
 * **Accelerated map** T(x) = x/2 or (3x+1)/2; counts are converted to Collatz steps.
 * **Native arithmetic up to 128 bits:** 8 steps per table lookup away from thresholds; near them,
@@ -159,7 +162,7 @@ by Brent's algorithm; divergence cannot be proved by computation and runs until 
 * **Guarded blocks:** log₂ x_j ≥ log₂ x + c·log₂ 3 − j, tracked in fixed point and rounded down,
   bounds how far to jump without skipping the first x_k < t.
 
-## Performance
+### Performance
 
 Apple M5, computation time only, best of 5 on an idle machine:
 
@@ -177,7 +180,7 @@ Apple M5, computation time only, best of 5 on an idle machine:
 With `-s`, parsing a huge decimal number costs more than the computation; expressions (`2^N-1`)
 and hexadecimal input parse much faster.
 
-## Tests
+### Tests
 
 `tests/reference.py` is a deliberately simple step-by-step simulation, checked against published
 records of δ(n), σ(n) and excursion (Oliveira e Silva; Barina). `tests/test_collatz.py` compares
@@ -186,18 +189,18 @@ the program with it on every n up to 200,000 (2 million with `--long`), random n
 checks that all internal paths agree on numbers up to 10⁶ bits. The suite passes under
 AddressSanitizer and UndefinedBehaviorSanitizer.
 
-# Candidate generator
+## Candidate generator
 
 If a counterexample exists, a smallest one N ≥ 2^71 exists. `candidates` lists the n in [A, B) that
 may still be N and discards all others by sieves, **without following any trajectory**. Guarantee:
 if N lies in [A, B), it is listed. Numbers already in `Tested/` are neither generated nor counted.
 
 ```sh
-./candidates -q 5                                 # first 5 candidates from 2^71
-./candidates '2^71' '2^71+10^9' | ./collatz -r -s # generate and verify (~1 s)
-./candidates -c '2^71' '2^71+2^40'                # count only (3,042,171,781, ~7 s)
-./candidates -x '2^71+79'                         # certificate of the discard
-./candidates -e -k 34                             # per-level efficiency of each sieve
+./candidates -q 5                                 ## first 5 candidates from 2^71
+./candidates '2^71' '2^71+10^9' | ./collatz -r -s ## generate and verify (~1 s)
+./candidates -c '2^71' '2^71+2^40'                ## count only (3,042,171,781, ~7 s)
+./candidates -x '2^71+79'                         ## certificate of the discard
+./candidates -e -k 34                             ## per-level efficiency of each sieve
 ```
 
 Quote expressions (in zsh, an unquoted `*` is a glob). With the defaults (2^32 sieve, 3^14 sieve,
@@ -224,7 +227,7 @@ run in ~1 s.
 
 Exit code: 0 success; 1 input error; 4 a certificate failed the simulation check (a bug).
 
-## Rule
+### Rule
 
 If some m with 1 ≤ m < n satisfies T^i(n) = T^j(m) for some i, j ≥ 0, then n is not the smallest
 counterexample: m would also be one (cycle or divergence alike). Every sieve is an instance of
@@ -238,7 +241,7 @@ this rule:
 | odd–even–even (Hercher 2023) | pattern 1^ℓ00 in x = T^i(n), x < 2n+1 | meets the trajectory of (x−1)/2 |
 | join (Roosendaal, Barina) | same class, same steps, smaller residue | m = n − d |
 
-## Sieves
+### Sieves
 
 * **2^K sieve.** For n = r + q·2^k, T^k(n) = 3^a·q + T^k(r) (a = odd steps), so x = T^k(n) is known
   mod 3^a. The predecessors of z are 2z and (2z−1)/3 (if z ≡ 2 mod 3, decidable while 3-adic
@@ -256,7 +259,7 @@ this rule:
 Generation only performs table lookups. All arithmetic is exact: the "+1" term enters the
 inequalities, since 3^a < 2^k alone does not guarantee descent (Rozier and Terracol, 2025).
 
-## Efficiency
+### Efficiency
 
 Surviving 2^K classes for n ≥ 2^71. The Barina and Angeltveit columns come from running the
 authors' sieves (Barina's production `h2esieve-24` file and his generator for K = 28; a port of
@@ -284,7 +287,7 @@ with L = 18. Combined (L = 14, J = 9 unless stated):
 Throughput: ~20–35 million candidates/s. In a pipeline the verifier is the bottleneck:
 `collatz -r -s` reads ~2.5 million numbers/s, covering ~10^9 integers of the range per second.
 
-## Certificates
+### Certificates
 
 Each discard has an explicit m; `-x` prints it and checks it by direct simulation:
 
@@ -301,11 +304,11 @@ n = 2^71+79 = 2361183241434822606927   [72 bits]
   If n were a counterexample, so would be m, and m < n.
 ```
 
-## Random sampling
+### Random sampling
 
 ```sh
-./candidates -a 1000 '2^71' '2^80' | ./collatz -r -s   # 1000 random candidates
-./candidates -a 20 --seed 42 '2^71' '2^72'             # reproducible draw
+./candidates -a 1000 '2^71' '2^80' | ./collatz -r -s   ## 1000 random candidates
+./candidates -a 20 --seed 42 '2^71' '2^72'             ## reproducible draw
 ```
 
 `-a N` outputs N distinct untested candidates of [A, B) in ascending order, drawn **uniformly**:
@@ -313,7 +316,7 @@ by direct draw of 2^K-table classes when N is small, or by one pass with reservo
 N ≥ 1/16 of the total or the range is heavily tested. Without `--seed`, the seed used is printed to
 standard error. Uniformity is checked by chi-squared tests.
 
-## Use in a search
+### Use in a search
 
 * The sieves establish only "not the smallest counterexample". To conclude that every n < B
   converges, cover all of [2^71, B) and check that each candidate drops below itself
@@ -322,7 +325,7 @@ standard error. Uniformity is checked by chi-squared tests.
 * The verified limit is 2075·2^60 ≈ 2^71.02 (Barina's site); starting at 2^71 is conservative.
 * A < 2^127, B ≤ 2^127. Below 2^71 the sieve is recomputed to hold from A (for tests).
 
-## Not implemented
+### Not implemented
 
 * **Cycle constraints** (Hercher; Simons and de Weger; Reyes Jiménez 2026): silent on divergent
   trajectories, so they discard no n.
@@ -336,7 +339,7 @@ standard error. Uniformity is checked by chi-squared tests.
 * **Joint table at full depth:** the gain is in shallow levels; it would need a per-candidate
   search, costlier than verification.
 
-## Generator tests
+### Generator tests
 
 `tests/ref_candidates.py` reimplements the sieves naively. `tests/test_candidates.py`
 (`make test-candidates`, ~1 min) checks:
